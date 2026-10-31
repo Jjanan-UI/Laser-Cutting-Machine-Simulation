@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LaserWorks · DXF Cutting Simulator</title>
+<style>
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:11px Tahoma,"Segoe UI",Arial,sans-serif;background:#dfe6f0;color:#000;display:flex;flex-direction:column;overflow:hidden;user-select:none}
+.menubar{display:flex;background:linear-gradient(#fafcff,#e4ebf5);border-bottom:1px solid #a9b7cb;height:21px;flex:none}
+.menu{position:relative;padding:3px 8px;cursor:default}
+.menu:hover,.menu.open{background:#cfe0f7;box-shadow:inset 0 0 0 1px #8fb0e0}
+.dd{display:none;position:absolute;top:20px;left:0;background:#f7f9fc;border:1px solid #8a97ab;min-width:160px;z-index:30;box-shadow:2px 2px 5px #0005}
+.menu.open .dd{display:block}
+.dd div{padding:4px 18px;white-space:nowrap}.dd div:hover{background:#316ac5;color:#fff}.dd .dis{color:#999}.dd .dis:hover{background:none;color:#999}
+.tb{display:flex;align-items:center;gap:2px;padding:2px 4px;background:linear-gradient(#f6f9fd,#dde6f2);border-bottom:1px solid #b7c3d4;min-height:28px;overflow:hidden;flex:none}
+.ib{width:24px;height:24px;display:grid;place-items:center;border:1px solid transparent;border-radius:2px;font-size:15px;cursor:pointer;line-height:1;flex:none}
+.ib:hover{border-color:#7da2ce;background:#dbe9fb}
+.sep{width:1px;height:20px;background:#b7c3d4;margin:0 3px;flex:none}
+.cf{display:flex;align-items:center;gap:3px;color:#333;flex:none}
+.cf input{width:54px;height:17px;border:1px solid #8c9db5;background:#fff;font:10px Tahoma;padding:0 3px;text-align:right;color:#222}
+.cf input.sm{width:34px;color:#888;background:#f2f2f2}
+.main{flex:1;display:flex;min-height:0}
+.tools{width:27px;background:linear-gradient(90deg,#f1f5fb,#dbe4f1);border-right:1px solid #aebbd0;display:flex;flex-direction:column;align-items:center;padding-top:3px;gap:1px;flex:none}
+.tools .ib{width:22px;height:22px;font-size:14px}
+.tools .ib.on{background:#c6dcf8;border-color:#6f9ad0}
+.center{flex:1;display:grid;grid-template-columns:18px 1fr;grid-template-rows:18px 1fr;min-width:0}
+.corner{background:#e6edf6;border-right:1px solid #8a97ab;border-bottom:1px solid #8a97ab}
+#hr,#vr{display:block;background:#f4f7fb}
+#hr{border-bottom:1px solid #8a97ab}#vr{border-right:1px solid #8a97ab}
+#vp{position:relative;overflow:hidden;background:#fff;min-width:0;min-height:0}
+#cv{position:absolute;left:0;top:0;cursor:default}
+#vp.drag::after{content:"Drop DXF file to open";position:absolute;inset:0;background:#316ac544;border:2px dashed #316ac5;display:grid;place-items:center;font-size:16px;color:#1d4a99}
+.right{width:292px;flex:none;background:#eef2f8;border-left:1px solid #8a97ab;display:flex;flex-direction:column;padding:4px 4px 0}
+.tabs{display:flex;border-bottom:1px solid #8a97ab;margin-bottom:-1px;position:relative;z-index:1}
+.tab{padding:3px 8px;border:1px solid #8a97ab;border-bottom:0;background:#dde5f0;margin-right:-1px;cursor:default}
+.tab.on{background:#f7f9fc;font-weight:600}
+.pane{display:none;border:1px solid #8a97ab;background:#f7f9fc;padding:6px;flex:1;min-height:0;overflow:auto}
+.pane.on{display:flex;flex-direction:column;gap:6px}
+.sunk{border:1px solid #7f8da3;background:#fff;height:116px;overflow:auto}
+table{border-collapse:collapse;width:100%}
+th{background:#e8eef7;font-weight:400;border:1px solid #c3cddb;padding:2px 3px;position:sticky;top:0}
+td{border:1px solid #dfe5ee;padding:1px 3px;text-align:center;height:19px}
+tr.sel td{background:#d4e4fa}
+td.sw div{height:13px;border:1px solid #333}
+td input{width:50px;border:0;background:transparent;color:#000;text-align:center;font:inherit}
+td input:focus{background:#fff;outline:1px solid #316ac5}
+.row{display:flex;justify-content:center;gap:10px}
+button{font:11px Tahoma,"Segoe UI",Arial;color:#111;background:linear-gradient(#fdfeff,#dfe7f2);border:1px solid #7f93b0;border-radius:3px;padding:3px 10px;cursor:pointer;min-width:56px}
+button:hover{background:linear-gradient(#f3f8ff,#cfe0f7);border-color:#4f7fc4}
+button:active{background:#c2d6f2}
+button:disabled{color:#999;border-color:#c0c8d4;background:#eef1f5;cursor:default}
+fieldset{border:1px solid #c3cddb;margin:0;padding:2px 6px 6px;color:#444}
+legend{padding:0 3px;color:#222}
+.lc{display:grid;grid-template-columns:20px 1fr 1fr 1fr 22px 22px;gap:3px;align-items:center;font-size:10px;text-align:center}
+.lc input[type=text]{width:100%;height:16px;border:1px solid #c3cddb;background:#f1f1f1;font-size:10px;text-align:right}
+.lw{border:1px solid #8a97ab;border-bottom:0;background:#e6edf6;margin-top:6px;padding:3px 5px 6px}
+.lw .t{text-align:center;margin-bottom:3px}
+.lw .g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.lw button{min-width:0;padding:4px 2px;font-size:10.5px}
+.lw .opt{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.prog{height:12px;border:1px solid #7f8da3;background:#fff;margin-top:5px;position:relative}
+.prog i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(#7fc47f,#2f9a2f)}
+.prog b{position:absolute;inset:0;text-align:center;font-weight:400;font-size:9px;line-height:10px}
+select{font:10.5px Tahoma;height:18px}
+.pal{display:flex;gap:0;padding:2px 3px;background:#e1e8f2;border-top:1px solid #aebbd0;flex:none}
+.pal i{width:19px;height:17px;border:1px solid #fff;outline:1px solid #666;margin:0 2px 0 0;cursor:pointer}
+.pal i:hover{outline-color:#f00}
+.status{display:flex;background:#e6edf6;border-top:1px solid #8a97ab;height:19px;flex:none}
+.status div{padding:2px 6px;border-right:1px solid #aebbd0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status .m{flex:1}
+</style>
+</head>
+<body>
+<div class="menubar" id="menubar"></div>
+<div class="tb" id="tb1"></div>
+<div class="tb" id="tb2">
+  <div class="cf">X <input id="fx" readonly value="0.000"> mm</div>
+  <div class="cf">Y <input id="fy" readonly value="0.000"> mm</div>
+  <div class="sep"></div>
+  <div class="cf">W <input id="fw" readonly value="0.000"> mm</div>
+  <div class="cf">H <input id="fh" readonly value="0.000"> mm</div>
+  <div class="cf"><input class="sm" value="100" readonly>%</div>
+  <div class="cf"><input class="sm" value="100" readonly>%</div>
+  <div class="ib" title="Lock ratio">🔒</div>
+  <div class="sep"></div>
+  <div class="cf"><span style="font-size:15px">↻</span><input class="sm" value="0" readonly>°</div>
+  <div class="cf" style="color:#888">Process NO: <input class="sm" value="1" readonly style="width:44px"></div>
+  <div class="sep"></div>
+  <div class="ib">⊢</div><div class="ib">⊣</div><div class="ib">⊤</div><div class="ib">⊥</div><div class="ib">⌖</div>
+</div>
+<div class="main">
+  <div class="tools" id="tools"></div>
+  <div class="center">
+    <div class="corner"></div><canvas id="hr" height="18"></canvas>
+    <canvas id="vr" width="18"></canvas>
+    <div id="vp"><canvas id="cv"></canvas></div>
+  </div>
+  <div class="right">
+    <div class="tabs" id="tabs"></div>
+    <div class="pane on" id="pane-work">
+      <div class="sunk"><table id="lt"><thead><tr><th>Layer</th><th>Mode</th><th>Speed</th><th>Power</th><th>Output</th></tr></thead><tbody></tbody></table></div>
+      <div class="row"><button id="upBtn">Up</button><button id="downBtn">Down</button></div>
+      <fieldset><legend>Line/column setup</legend>
+        <div class="lc"><span></span><b style="font-weight:400">Num</b><b style="font-weight:400">space</b><b style="font-weight:400">Dislocation</b><b style="font-weight:400" style="grid-column:span 2">Mirror</b><span></span>
+          <span>X:</span><input type="text" value="1" disabled><input type="text" value="0.000" disabled><input type="text" value="0.000" disabled><label>☐H</label><label>☐V</label>
+          <span>Y:</span><input type="text" value="1" disabled><input type="text" value="0.000" disabled><input type="text" value="0.000" disabled><label>☐H</label><label>☐V</label>
+        </div>
+        <div class="row" style="margin-top:6px"><button disabled>Virtual array</button><button disabled>Bestrew...</button><button disabled>Adjust</button></div>
+      </fieldset>
+    </div>
+    <div class="pane" id="pane-other"><div style="color:#666;padding:10px">This panel is not available in the simulator.</div></div>
+    <div class="lw">
+      <div class="t">Laser work</div>
+      <div class="g">
+        <button id="startBtn">Start</button><button id="pauseBtn">Pause/Continue</button><button id="stopBtn">Stop</button>
+        <button data-na>SaveToUFile</button><button data-na>UFileOutput</button><button data-na>Download</button>
+      </div>
+      <div class="opt"><label><input type="checkbox" id="opt" checked> Path optimize</label>
+        <span>Sim <select id="mult"><option value="1">1×</option><option value="5" selected>5×</option><option value="20">20×</option><option value="60">60×</option></select></span>
+        <button data-na style="min-width:60px">Cut scale</button></div>
+      <div class="prog"><i id="pbar"></i><b id="ptxt">00:00 / 00:00</b></div>
+    </div>
+  </div>
+</div>
+<div class="pal" id="pal"></div>
+<div class="status"><div class="m" id="msg"></div><div id="coord" style="width:210px">X:0.000mm,Y:0.000mm</div></div>
+<input type="file" id="file" accept=".dxf" hidden>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const PAL=['#000000','#0000ff','#ff0000','#00e000','#ff8a80','#ffe800','#2090ff','#8b4513','#808000','#008060','#ff6a10','#400080','#b0b0f0','#c8ff90','#ff9a60','#d070a0','#80d080','#b09868'];
+const RAPID=400;
+let layers=[],objs=[],sel=0,optimize=true,plan=null,fname='';
+let view={s:1,ox:0,oy:0};
+const sim={t:0,playing:false,last:null,mult:5};
+const cv=$('cv'),ctx=cv.getContext('2d'),hr=$('hr'),vr=$('vr'),vp=$('vp');
+const msg=t=>$('msg').textContent=t;
+const NA=()=>msg('This function is not available in the simulator.');
+
+/* ---------- DXF parsing ---------- */
+function extractOld(text){
+  const L=text.split(/\r?\n/),ents=[];let i=0,inEnt=false,units=4;
+  for(let j=0;j<L.length-2;j++){
+    if(L[j].trim()==='$INSUNITS'){const v=parseInt(L[j+2].trim());if(v>0)units=v;break}
+  }
+  while(i<L.length){
+    const c=(L[i]||'').trim(),v=(L[i+1]||'').trim();
+    if(c==='0'&&v==='SECTION'){inEnt=(L[i+3]||'').trim()==='ENTITIES';i+=4;continue}
+    if(c==='0'&&v==='ENDSEC'){inEnt=false;i+=2;continue}
+    if(c==='0'&&v==='EOF')break;
+    if(inEnt&&c==='0'){
+      const data={};i+=2;
+      while(i<L.length){const cc=(L[i]||'').trim(),vv=(L[i+1]||'').trim();if(cc==='0'||cc==='')break;(data[cc]=data[cc]||[]).push(vv);i+=2}
+      ents.push({type:v,data});continue;
+    }
+    i+=2;
+  }
+  return{ents,units};
+}
+const UNIT={1:25.4,2:304.8,4:1,5:10,6:1000};
+function parseDXFOld(text){
+  const{ents,units}=extract(text),k=UNIT[units]||1,out=[];
+  const add=(layer,pts)=>{if(pts.length>=2)out.push({layer:layer||'0',pts})};
+  ents.forEach((e,idx)=>{
+    const d=e.data,lay=(d[8]||['0'])[0],n=c=>parseFloat((d[c]||[])[0])*k;
+    if(e.type==='LINE'){const a=[n(10),n(20),n(11),n(21)];if(a.every(isFinite))add(lay,[[a[0],a[1]],[a[2],a[3]]])}
+    else if(e.type==='LWPOLYLINE'){
+      const xs=(d[10]||[]).map(v=>parseFloat(v)*k),ys=(d[20]||[]).map(v=>parseFloat(v)*k),p=[];
+      xs.forEach((x,j)=>{if(isFinite(x)&&isFinite(ys[j]))p.push([x,ys[j]])});
+      if((parseInt((d[70]||[])[0])&1)&&p.length)p.push([...p[0]]);add(lay,p);
+    }
+    else if(e.type==='POLYLINE'){
+      const p=[];for(let j=idx+1;j<ents.length&&ents[j].type==='VERTEX';j++){
+        const x=parseFloat((ents[j].data[10]||[])[0])*k,y=parseFloat((ents[j].data[20]||[])[0])*k;if(isFinite(x)&&isFinite(y))p.push([x,y])}
+      if((parseInt((d[70]||[])[0])&1)&&p.length)p.push([...p[0]]);add(lay,p);
+    }
+    else if(e.type==='CIRCLE'||e.type==='ARC'){
+      const cx=n(10),cy=n(20),r=n(40);if(!isFinite(cx+cy+r)||r<=0)return;
+      let a0=0,a1=360;if(e.type==='ARC'){a0=parseFloat((d[50]||[])[0])||0;a1=parseFloat((d[51]||[])[0])||360;if(a1<=a0)a1+=360}
+      const span=a1-a0,N=e.type==='CIRCLE'?Math.max(32,Math.min(240,Math.ceil(r*3))):Math.max(12,Math.min(180,Math.ceil(span/4))),p=[];
+      for(let j=0;j<=N;j++){const a=(a0+span*j/N)*Math.PI/180;p.push([cx+r*Math.cos(a),cy+r*Math.sin(a)])}
+      add(lay,p);
+    }
+  });
+  return out;
+}
+function extract(text){const L=text.split(String.fromCharCode(10));let units=4;for(let j=0;j<L.length-2;j++){if(L[j].trim()==='$INSUNITS'){const v=parseInt(L[j+2]);if(v>0)units=v;break}}
+const ents=[],blocks={};let sec='',cur=null,i=0;
+while(i<L.length){const c=(L[i]||'').trim(),v=(L[i+1]||'').trim();
+if(c==='0'&&v==='SECTION'){sec=(L[i+3]||'').trim();i+=4;continue}
+if(c==='0'&&v==='ENDSEC'){sec='';i+=2;continue}
+if(c==='0'&&v==='EOF')break;
+if(c==='0'&&(sec==='ENTITIES'||sec==='BLOCKS')){const data={seq:[]};i+=2;
+while(i<L.length){const cc=(L[i]||'').trim(),vv=(L[i+1]||'').trim();if(cc==='0'||cc==='')break;(data[cc]=data[cc]||[]).push(vv);data.seq.push([cc,vv]);i+=2}
+const e={type:v,data};
+if(sec==='ENTITIES')ents.push(e);
+else if(v==='BLOCK'){cur={bx:parseFloat((data[10]||[0])[0])||0,by:parseFloat((data[20]||[0])[0])||0,ents:[]};blocks[(data[2]||[''])[0]]=cur}
+else if(v==='ENDBLK')cur=null;else if(cur)cur.ents.push(e);
+continue}
+i+=2}
+return{ents,blocks,units}}
+function bspline(cp,deg,kn,N){const n=cp.length,out=[],t0=kn[deg],t1=kn[n];
+for(let s=0;s<=N;s++){const t=s===N?t1-1e-9:t0+(t1-t0)*s/N;let m=deg;while(m<n-1&&kn[m+1]<=t)m++;
+const dd=[];for(let j=0;j<=deg;j++)dd.push(cp[j+m-deg].slice());
+for(let r=1;r<=deg;r++)for(let j=deg;j>=r;j--){const den=kn[j+1+m-r]-kn[j+m-deg],a=den?(t-kn[j+m-deg])/den:0;for(let q=0;q<3;q++)dd[j][q]=(1-a)*dd[j-1][q]+a*dd[j][q]}
+const P=dd[deg];out.push([P[0]/P[2],P[1]/P[2]])}return out}
+function parseDXF(text){
+const{ents,blocks,units}=extract(text),k=UNIT[units]||1,out=[],skipped={};
+const num=(d,c,i=0,def=NaN)=>{const v=parseFloat((d[c]||[])[i]);return isNaN(v)?def:v};
+const arc=(cx,cy,r,a0,a1,N)=>{const p=[];for(let j=0;j<=N;j++){const a=(a0+(a1-a0)*j/N)*Math.PI/180;p.push([cx+r*Math.cos(a),cy+r*Math.sin(a)])}return p};
+const bulge=(p,q,b,pts)=>{const ch=Math.hypot(q[0]-p[0],q[1]-p[1]);if(!b||ch<1e-9){pts.push(q);return}
+const th=4*Math.atan(b),off=(ch/2)/Math.tan(th/2),cx=(p[0]+q[0])/2-(q[1]-p[1])/ch*off,cy=(p[1]+q[1])/2+(q[0]-p[0])/ch*off;
+const a0=Math.atan2(p[1]-cy,p[0]-cx),r=Math.hypot(p[0]-cx,p[1]-cy),n=Math.max(4,Math.ceil(Math.abs(th)/0.087));
+for(let j=1;j<=n;j++){const a=a0+th*j/n;pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a)])}pts[pts.length-1]=q};
+const poly=(v,closed)=>{if(v.length<2)return[];const pts=[[v[0].x,v[0].y]],m=closed?v.length:v.length-1;for(let i=0;i<m;i++){const a=v[i],b=v[(i+1)%v.length];bulge([a.x,a.y],[b.x,b.y],a.b,pts)}return pts};
+const walk=(list,tf,inh,depth)=>{list.forEach((e,idx)=>{
+const d=e.data,t=e.type;let lay=(d[8]||['0'])[0];if(lay==='0'&&inh)lay=inh;
+const mir=num(d,230,0,1)<0;
+const add=(pts,ocs)=>{if(pts.length<2)return;if(ocs&&mir)pts=pts.map(q=>[-q[0],q[1]]);out.push({layer:lay,pts:pts.map(q=>tf(q))})};
+const closed=(parseInt((d[70]||[])[0])&1)===1;
+if(t==='LINE'){const a=[num(d,10)*k,num(d,20)*k,num(d,11)*k,num(d,21)*k];if(a.every(isFinite))add([[a[0],a[1]],[a[2],a[3]]])}
+else if(t==='LWPOLYLINE'){const v=[];(d.seq||[]).forEach(([c,val])=>{const f=parseFloat(val);if(c==='10')v.push({x:f*k,y:0,b:0});else if(c==='20'&&v.length)v[v.length-1].y=f*k;else if(c==='42'&&v.length)v[v.length-1].b=f});add(poly(v,closed),true)}
+else if(t==='POLYLINE'){const v=[];for(let j=idx+1;j<list.length&&list[j].type==='VERTEX';j++){const vd=list[j].data;v.push({x:num(vd,10)*k,y:num(vd,20)*k,b:num(vd,42,0,0)})}add(poly(v.filter(q=>isFinite(q.x+q.y)),closed),true)}
+else if(t==='CIRCLE'||t==='ARC'){const cx=num(d,10)*k,cy=num(d,20)*k,r=num(d,40)*k;if(!isFinite(cx+cy+r)||r<=0)return;
+let a0=0,a1=360;if(t==='ARC'){a0=num(d,50,0,0);a1=num(d,51,0,360);if(a1<=a0)a1+=360}
+const span=a1-a0;add(arc(cx,cy,r,a0,a1,Math.min(360,Math.max(Math.ceil(span/4),Math.ceil(r*span/360)))),true)}
+else if(t==='ELLIPSE'){const cx=num(d,10)*k,cy=num(d,20)*k,mx=num(d,11)*k,my=num(d,21)*k,ra=num(d,40,0,1),sg=mir?-1:1;let s=num(d,41,0,0),en=num(d,42,0,2*Math.PI);if(en<=s)en+=2*Math.PI;
+const N=Math.max(24,Math.ceil((en-s)/0.05)),p=[];for(let j=0;j<=N;j++){const a=s+(en-s)*j/N;p.push([cx+Math.cos(a)*mx-sg*Math.sin(a)*ra*my,cy+Math.cos(a)*my+sg*Math.sin(a)*ra*mx])}add(p)}
+else if(t==='SPLINE'){const cp=[],fp=[];(d.seq||[]).forEach(([c,val])=>{const f=parseFloat(val)*k;if(c==='10')cp.push([f,0]);else if(c==='20'&&cp.length)cp[cp.length-1][1]=f;else if(c==='11')fp.push([f,0]);else if(c==='21'&&fp.length)fp[fp.length-1][1]=f});
+const deg=num(d,71,0,3),kn=(d[40]||[]).map(parseFloat),wt=(d[41]||[]).map(parseFloat);let p;
+if(cp.length>deg&&kn.length===cp.length+deg+1){const c3=cp.map((q,i)=>{const w=wt.length===cp.length?wt[i]:1;return[q[0]*w,q[1]*w,w]});p=bspline(c3,deg,kn,Math.max(48,cp.length*12))}
+else p=cp.length>1?cp:fp;add(p)}
+else if(t==='INSERT'){const b=blocks[(d[2]||[''])[0]];if(!b||depth>8){skipped.INSERT=(skipped.INSERT||0)+1;return}
+const ix=num(d,10,0,0)*k,iy=num(d,20,0,0)*k,sxs=num(d,41,0,1),sys=num(d,42,0,1),r=num(d,50,0,0)*Math.PI/180,c=Math.cos(r),s=Math.sin(r),bx=b.bx*k,by=b.by*k;
+const cols=Math.max(1,num(d,70,0,1)),rows=Math.max(1,num(d,71,0,1)),dc=num(d,44,0,0)*k,dr=num(d,45,0,0)*k;
+for(let ri=0;ri<rows;ri++)for(let ci=0;ci<cols;ci++){const ox=ci*dc*c-ri*dr*s,oy=ci*dc*s+ri*dr*c;
+walk(b.ents,q=>{const x=(q[0]-bx)*sxs,y=(q[1]-by)*sys;return tf([x*c-y*s+ix+ox,x*s+y*c+iy+oy])},lay,depth+1)}}
+else if(t!=='VERTEX'&&t!=='SEQEND')skipped[t]=(skipped[t]||0)+1;
+})};
+walk(ents,q=>q,'',0);out.skipped=skipped;return out}
+function demoDXF(){
+  const o=[],p=(...a)=>o.push(...a.map(String));
+  p(0,'SECTION',2,'HEADER',9,'$INSUNITS',70,4,0,'ENDSEC',0,'SECTION',2,'ENTITIES');
+  const poly=(l,pts)=>{p(0,'LWPOLYLINE',8,l,90,pts.length,70,1);pts.forEach(q=>p(10,q[0],20,q[1]))};
+  const circ=(l,x,y,r)=>p(0,'CIRCLE',8,l,10,x,20,y,40,r);
+  circ('HOLES',120,120,18);circ('HOLES',220,180,12);circ('HOLES',60,100,8);
+  poly('HOLES',[[240,60],[270,60],[270,90],[240,90]]);
+  poly('HOLES',[[150,180],[200,180],[200,195],[150,195]]);
+  p(0,'ARC',8,'ENGRAVE',10,80,20,180,40,15,50,30,51,150);
+  p(0,'ARC',8,'ENGRAVE',10,80,20,180,40,25,50,30,51,150);
+  p(0,'LINE',8,'ENGRAVE',10,40,20,230,11,110,21,230);
+  poly('OUTLINE',[[40,40],[260,40],[300,80],[300,220],[260,260],[40,260],[0,220],[0,80]]);
+  p(0,'ENDSEC',0,'EOF');return o.join('\n');
+}
+
+/* ---------- document ---------- */
+function load(list,name){
+  fname=name;objs=[];layers=[];
+  list.forEach(o=>{
+    let L=layers.find(l=>l.name===o.layer);
+    if(!L){L={name:o.layer,color:PAL[layers.length%PAL.length],speed:100,power:30,out:true};layers.push(L)}
+    objs.push({L,pts:o.pts});
+  });
+  sel=0;renderLayers();fit();invalidate();
+  msg(`Loaded "${name}" — ${objs.length} objects on ${layers.length} layer(s).`+(list.skipped&&Object.keys(list.skipped).length?' Skipped unsupported: '+Object.entries(list.skipped).map(([k,v])=>k+' x'+v).join(', ')+'.':''));
+}
+function bounds(){
+  let x0=1e18,y0=1e18,x1=-1e18,y1=-1e18;
+  objs.forEach(o=>o.pts.forEach(q=>{x0=Math.min(x0,q[0]);x1=Math.max(x1,q[0]);y0=Math.min(y0,q[1]);y1=Math.max(y1,q[1])}));
+  return objs.length?{x0,y0,x1,y1}:{x0:0,y0:0,x1:400,y1:300};
+}
+function clearDoc(){objs=[];layers=[];fname='';renderLayers();fit();invalidate();['fx','fy','fw','fh'].forEach(i=>$(i).value='0.000');msg('Document cleared.')}
+function renderLayers(){
+  const tb=$('lt').tBodies[0];tb.innerHTML='';
+  layers.forEach((L,i)=>{
+    const tr=document.createElement('tr');if(i===sel)tr.className='sel';
+    tr.innerHTML=`<td class="sw"><div style="background:${L.color}"></div></td><td>Cut</td><td><input type="number" min="1" max="1000" step="5" value="${L.speed.toFixed(1)}"></td><td><input type="number" min="1" max="100" step="1" value="${L.power.toFixed(1)}"></td><td style="cursor:pointer">${L.out?'Yes':'No'}</td>`;
+    tr.onclick=()=>{if(sel!==i){sel=i;renderLayers()}};
+    const [sp,pw]=tr.querySelectorAll('input');
+    sp.onchange=()=>{L.speed=Math.max(1,parseFloat(sp.value)||100);invalidate()};
+    pw.onchange=()=>{L.power=Math.min(100,Math.max(1,parseFloat(pw.value)||30));draw()};
+    tr.cells[4].onclick=()=>{L.out=!L.out;renderLayers();invalidate()};
+    tb.appendChild(tr);
+  });
+}
+function move(d){
+  const j=sel+d;if(j<0||j>=layers.length)return;
+  [layers[sel],layers[j]]=[layers[j],layers[sel]];sel=j;renderLayers();invalidate();
+}
+
+/* ---------- toolpath plan ---------- */
+function build(){
+  const flat=[];let end=null;
+  for(const L of layers){
+    if(!L.out)continue;
+    const rem=objs.filter(o=>o.L===L).map(o=>o.pts);
+    while(rem.length){
+      let bi=0;
+      if(optimize&&end){let bd=1e18;rem.forEach((p,i)=>{const d=Math.hypot(p[0][0]-end[0],p[0][1]-end[1]);if(d<bd){bd=d;bi=i}})}
+      const p=rem.splice(bi,1)[0];
+      if(!end||Math.hypot(p[0][0]-end[0],p[0][1]-end[1])>.01)flat.push({x:p[0][0],y:p[0][1],type:'rapid',sp:RAPID,L});
+      for(let i=1;i<p.length;i++)flat.push({x:p[i][0],y:p[i][1],type:'cut',sp:L.speed,L});
+      end=p[p.length-1];
+    }
+  }
+  const T=[0];
+  for(let i=1;i<flat.length;i++)T.push(T[i-1]+Math.hypot(flat[i].x-flat[i-1].x,flat[i].y-flat[i-1].y)/flat[i].sp);
+  return{flat,T,total:T.length?T[T.length-1]:0};
+}
+function pos(t){
+  const{flat,T}=plan;let lo=0,hi=flat.length-1;
+  while(lo<hi){const m=(lo+hi+1)>>1;if(T[m]<=t)lo=m;else hi=m-1}
+  if(lo>=flat.length-1)return{x:flat[lo].x,y:flat[lo].y,k:lo,type:flat[lo].type,L:flat[lo].L};
+  const a=flat[lo],b=flat[lo+1],f=T[lo+1]>T[lo]?(t-T[lo])/(T[lo+1]-T[lo]):0;
+  return{x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f,k:lo,type:b.type,L:b.L};
+}
+function invalidate(){
+  sim.playing=false;sim.t=0;plan=build();upd();draw();
+  const b=bounds();if(objs.length){$('fx').value=b.x0.toFixed(3);$('fy').value=b.y0.toFixed(3);$('fw').value=(b.x1-b.x0).toFixed(3);$('fh').value=(b.y1-b.y0).toFixed(3)}
+}
+const fmt=s=>{s=Math.round(s);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+function upd(){
+  const tot=plan?plan.total:0;
+  $('ptxt').textContent=fmt(sim.t)+' / '+fmt(tot);
+  $('pbar').style.width=(tot?sim.t/tot*100:0)+'%';
+}
+
+/* ---------- drawing ---------- */
+const sx=x=>view.ox+x*view.s,sy=y=>view.oy-y*view.s;
+function stepSize(){for(const v of [1,2,5,10,20,50,100,200,500,1000,2000])if(v*view.s>=55)return v;return 5000}
+function draw(){
+  const w=cv.width,h=cv.height;
+  ctx.setLineDash([]);ctx.shadowBlur=0;ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
+  const st=stepSize(),x0=-view.ox/view.s,x1=(w-view.ox)/view.s,y1=view.oy/view.s,y0=(view.oy-h)/view.s;
+  ctx.strokeStyle='#b4b4b4';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();
+  for(let x=Math.floor(x0/st)*st;x<=x1;x+=st){const p=Math.round(sx(x))+.5;ctx.moveTo(p,0);ctx.lineTo(p,h)}
+  for(let y=Math.floor(y0/st)*st;y<=y1;y+=st){const p=Math.round(sy(y))+.5;ctx.moveTo(0,p);ctx.lineTo(w,p)}
+  ctx.stroke();ctx.setLineDash([]);
+  // origin marker
+  ctx.strokeStyle='#d00';ctx.beginPath();ctx.moveTo(sx(0)-8,sy(0));ctx.lineTo(sx(0)+8,sy(0));ctx.moveTo(sx(0),sy(0)-8);ctx.lineTo(sx(0),sy(0)+8);ctx.stroke();
+  // objects
+  ctx.lineWidth=1;
+  for(const o of objs){
+    ctx.strokeStyle=o.L.out?o.L.color:'#bbb';ctx.beginPath();
+    o.pts.forEach((q,i)=>i?ctx.lineTo(sx(q[0]),sy(q[1])):ctx.moveTo(sx(q[0]),sy(q[1])));ctx.stroke();
+  }
+  // simulation progress
+  if(plan&&plan.flat.length&&sim.t>0){
+    const p=pos(sim.t),f=plan.flat;
+    const run=(a,b,type,part)=>{ // stroke points a..b with partial end
+      ctx.beginPath();ctx.moveTo(sx(f[a].x),sy(f[a].y));
+      for(let i=a+1;i<=b;i++)ctx.lineTo(sx(f[i].x),sy(f[i].y));
+      if(part)ctx.lineTo(sx(p.x),sy(p.y));
+      if(type==='rapid'){ctx.strokeStyle='#3e8bff';ctx.lineWidth=1;ctx.setLineDash([5,5]);ctx.stroke()}
+      else{ctx.setLineDash([]);ctx.strokeStyle='rgba(255,40,0,.28)';ctx.lineWidth=5;ctx.stroke();ctx.strokeStyle='#ff1a1a';ctx.lineWidth=1.8;ctx.stroke()}
+      ctx.setLineDash([]);
+    };
+    for(let i=1;i<=p.k;){let j=i;while(j<p.k&&f[j+1].type===f[i].type)j++;run(i-1,j,f[i].type);i=j+1}
+    if(p.k<f.length-1)run(p.k,p.k,p.type,true);
+    // laser head
+    const cx=sx(p.x),cy=sy(p.y),cut=p.type==='cut'&&sim.t<plan.total,pw=cut?Math.max(.2,p.L.power/100):0;
+    if(cut){
+      const R=14+pw*26,g=ctx.createRadialGradient(cx,cy,1,cx,cy,R);
+      g.addColorStop(0,`rgba(255,255,230,${.5+pw*.45})`);g.addColorStop(.3,`rgba(255,170,40,${.35+pw*.4})`);g.addColorStop(1,'rgba(255,0,0,0)');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.fill();
+    }
+    ctx.strokeStyle=cut?'#e05000':'#2060d0';ctx.lineWidth=1.2;ctx.beginPath();
+    ctx.moveTo(cx-12,cy);ctx.lineTo(cx+12,cy);ctx.moveTo(cx,cy-12);ctx.lineTo(cx,cy+12);ctx.stroke();
+    ctx.fillStyle=cut?'#ff7a00':'#3e8bff';ctx.beginPath();ctx.arc(cx,cy,3.5,0,7);ctx.fill();
+  }
+  rulers(st,x0,x1,y0,y1);
+}
+function rulers(st,x0,x1,y0,y1){
+  const hc=hr.getContext('2d'),vc=vr.getContext('2d'),mn=st>=10?st/5:st/2;
+  for(const c of [hc,vc]){c.fillStyle='#f4f7fb';c.fillRect(0,0,9999,9999);c.strokeStyle='#555';c.fillStyle='#222';c.font='10px Tahoma';c.lineWidth=1}
+  hc.beginPath();
+  for(let x=Math.floor(x0/mn)*mn;x<=x1;x+=mn){
+    const px=Math.round(sx(x))+.5,maj=Math.abs(x/st-Math.round(x/st))<1e-6;
+    hc.moveTo(px,18);hc.lineTo(px,maj?4:13);if(maj)hc.fillText(String(Math.round(x)),px+2,10);
+  }
+  hc.stroke();vc.beginPath();
+  for(let y=Math.floor(y0/mn)*mn;y<=y1;y+=mn){
+    const py=Math.round(sy(y))+.5,maj=Math.abs(y/st-Math.round(y/st))<1e-6;
+    vc.moveTo(18,py);vc.lineTo(maj?4:13,py);
+    if(maj){vc.save();vc.translate(10,py-2);vc.rotate(-Math.PI/2);vc.fillText(String(Math.round(y)),0,0);vc.restore()}
+  }
+  vc.stroke();
+}
+function fit(){
+  const b=bounds(),w=cv.width,h=cv.height,m=50,bw=Math.max(b.x1-b.x0,1),bh=Math.max(b.y1-b.y0,1);
+  view.s=Math.max(.01,Math.min((w-2*m)/bw,(h-2*m)/bh));
+  view.ox=(w-bw*view.s)/2-b.x0*view.s;view.oy=h-(h-bh*view.s)/2+b.y0*view.s;draw();
+}
+function zoom(f,mx=cv.width/2,my=cv.height/2){
+  view.ox=mx-(mx-view.ox)*f;view.oy=my+(view.oy-my)*f;view.s*=f;draw();
+}
+function resize(){
+  cv.width=hr.width=vp.clientWidth;cv.height=vr.height=vp.clientHeight;draw();
+}
+new ResizeObserver(resize).observe(vp);
+
+/* ---------- interaction ---------- */
+let pan=null;
+cv.addEventListener('mousedown',e=>{pan={x:e.clientX,y:e.clientY,ox:view.ox,oy:view.oy};cv.style.cursor='grabbing'});
+window.addEventListener('mouseup',()=>{pan=null;cv.style.cursor='default'});
+window.addEventListener('mousemove',e=>{
+  if(pan){view.ox=pan.ox+e.clientX-pan.x;view.oy=pan.oy+e.clientY-pan.y;draw()}
+});
+cv.addEventListener('mousemove',e=>{
+  const r=cv.getBoundingClientRect();
+  $('coord').textContent=`X:${((e.clientX-r.left-view.ox)/view.s).toFixed(3)}mm,Y:${((view.oy-(e.clientY-r.top))/view.s).toFixed(3)}mm`;
+});
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoom(e.deltaY<0?1.2:1/1.2,e.clientX-r.left,e.clientY-r.top)},{passive:false});
+cv.addEventListener('dblclick',fit);
+
+/* ---------- running the job ---------- */
+function loop(ts){
+  if(!sim.playing)return;
+  if(sim.last==null)sim.last=ts;
+  const dt=Math.min((ts-sim.last)/1000,.1);sim.last=ts;sim.t+=dt*sim.mult;
+  if(sim.t>=plan.total){sim.t=plan.total;sim.playing=false;msg('Job finished. Total time '+fmt(plan.total)+'.')}
+  draw();upd();if(sim.playing)requestAnimationFrame(loop);
+}
+$('startBtn').onclick=()=>{
+  plan=build();if(!plan.flat.length){msg('Nothing to cut — load a DXF file and enable at least one layer.');return}
+  sim.t=0;sim.playing=true;sim.last=null;msg('Cutting…');requestAnimationFrame(loop);
+};
+$('pauseBtn').onclick=()=>{
+  if(!plan||!plan.flat.length)return;
+  if(sim.playing){sim.playing=false;msg('Paused.')}
+  else if(sim.t<plan.total){sim.playing=true;sim.last=null;msg('Cutting…');requestAnimationFrame(loop)}
+};
+$('stopBtn').onclick=()=>{sim.playing=false;sim.t=0;upd();draw();msg('Stopped.')};
+$('opt').onchange=e=>{optimize=e.target.checked;invalidate();msg('Path optimize '+(optimize?'on':'off')+'.')};
+$('mult').onchange=e=>sim.mult=+e.target.value;
+document.querySelectorAll('[data-na]').forEach(b=>b.onclick=NA);
+$('upBtn').onclick=()=>move(-1);$('downBtn').onclick=()=>move(1);
+
+/* ---------- files ---------- */
+async function handleFile(f){
+  if(!f)return;
+  if(!/\.dxf$/i.test(f.name)){msg('Please choose a .dxf file.');return}
+  try{const list=parseDXF(await f.text());if(!list.length){msg('No supported entities (LINE, POLYLINE, CIRCLE, ARC) found.');return}load(list,f.name)}
+  catch(err){msg('Failed to read DXF: '+err.message)}
+}
+$('file').onchange=e=>{handleFile(e.target.files[0]);e.target.value=''};
+['dragenter','dragover'].forEach(n=>vp.addEventListener(n,e=>{e.preventDefault();vp.classList.add('drag')}));
+['dragleave','drop'].forEach(n=>vp.addEventListener(n,e=>{e.preventDefault();vp.classList.remove('drag')}));
+vp.addEventListener('drop',e=>handleFile(e.dataTransfer.files[0]));
+const demo=()=>load(parseDXF(demoDXF()),'demo_bracket.dxf');
+const A={open:()=>$('file').click(),demo,clear:clearDoc,zin:()=>zoom(1.25),zout:()=>zoom(1/1.25),fit,na:NA,
+  about:()=>msg('LaserWorks — DXF laser cutting simulator. Supports LINE, LWPOLYLINE, POLYLINE, CIRCLE, ARC.')};
+
+/* ---------- chrome ---------- */
+const menus={'File(F)':[['Open DXF…','open'],['Load demo','demo'],['Clear','clear']],'Edit(E)':[['Undo','na'],['Redo','na']],'Draw(D)':[['Line','na'],['Rectangle','na'],['Ellipse','na']],
+ 'Config(S)':[['Machine settings','na']],'Handle(W)':[['Path optimize','na']],'View(V)':[['Zoom in','zin'],['Zoom out','zout'],['Zoom to fit','fit']],'Help(H)':[['About','about']]};
+const mb=$('menubar');
+for(const k in menus){
+  const m=document.createElement('div');m.className='menu';m.textContent=k;
+  const dd=document.createElement('div');dd.className='dd';
+  menus[k].forEach(([t,a])=>{const i=document.createElement('div');i.textContent=t;if(a==='na')i.className='dis';i.onclick=e=>{e.stopPropagation();m.classList.remove('open');A[a]()};dd.appendChild(i)});
+  m.appendChild(dd);m.onclick=()=>{const o=m.classList.contains('open');document.querySelectorAll('.menu').forEach(x=>x.classList.remove('open'));if(!o)m.classList.add('open')};
+  mb.appendChild(m);
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.menu'))document.querySelectorAll('.menu').forEach(x=>x.classList.remove('open'))});
+const tb1=[['📄','New','clear'],['📂','Open DXF','open'],['💾','Save','na'],'|',['📥','Import','open'],['📤','Export','na'],'|',['⬅','Previous','na'],['➡','Next','na'],'|',
+ ['🔍','Zoom in','zin'],['🔎','Zoom out','zout'],['⛶','Zoom to fit','fit'],['🧭','Zoom to window','fit'],'|',['▢','Rectangle','na'],['⌇','Curve','na'],['⚙','Settings','na'],['🖨','Print','na'],'|',['🖥','Machine','na'],['✨','Demo','demo']];
+tb1.forEach(t=>{
+  if(t==='|'){const s=document.createElement('div');s.className='sep';$('tb1').appendChild(s);return}
+  const b=document.createElement('div');b.className='ib';b.textContent=t[0];b.title=t[1];b.onclick=A[t[2]];$('tb1').appendChild(b);
+});
+['↖','⤢','╱','〰','⌇','▭','◯','𝗜','✳','◔','▦','✖','◭','◢','◼','▤'].forEach((g,i)=>{
+  const b=document.createElement('div');b.className='ib'+(i===0?' on':'');b.textContent=g;
+  b.onclick=()=>{document.querySelectorAll('#tools .ib').forEach(x=>x.classList.remove('on'));b.classList.add('on');if(i>0)NA()};$('tools').appendChild(b);
+});
+['Work','Output','Doc','User','Test','Transform'].forEach((t,i)=>{
+  const s=document.createElement('span');s.className='tab'+(i===0?' on':'');s.textContent=t;
+  s.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));s.classList.add('on');$('pane-work').classList.toggle('on',i===0);$('pane-other').classList.toggle('on',i!==0)};
+  $('tabs').appendChild(s);
+});
+PAL.forEach(c=>{
+  const i=document.createElement('i');i.style.background=c;i.title='Set color of selected layer';
+  i.onclick=()=>{if(layers[sel]){layers[sel].color=c;renderLayers();draw()}};$('pal').appendChild(i);
+});
+
+msg('Welcome to use the Laser system of cutting. Open a DXF file or drag one onto the workspace. Scroll to zoom, drag to pan, double-click to fit.');
+resize();demo();
+})();
+</script>
+</body>
+</html>
