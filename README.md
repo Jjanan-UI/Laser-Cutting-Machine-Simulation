@@ -1,4 +1,4 @@
-# 🔦 LaserWorks · DXF Cutting Simulator
+# 🔦 Laser Cutting Machine - DXF Cutting Simulator
 
 A single-file, zero-dependency, browser-based **laser cutting pre-flight simulator**.
 Drop in a DXF, watch the toolpath run, and catch drawing and process errors **before**
